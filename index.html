@@ -39,6 +39,11 @@ h1{font-size:1.7rem;margin:0;letter-spacing:-.02em;background:linear-gradient(90
 h2{font-size:1.1rem;margin:0 0 4px}
 .sub{color:var(--muted);margin:0;font-size:.92rem}
 main{max-width:680px;margin:0 auto;padding:14px 18px 110px}
+.fl{width:28px;height:20px;border-radius:4px;object-fit:cover;box-shadow:0 0 0 1px rgba(128,128,128,.4);vertical-align:-4px;margin-right:6px}
+.fl.big{width:44px;height:31px;border-radius:6px;margin-right:8px;vertical-align:-9px}
+.coin{display:inline-grid;place-items:center;font-size:.55rem;font-weight:700;background:linear-gradient(135deg,var(--a),var(--a2));color:#fff}
+.pair{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;margin-top:16px;font-size:1.15rem}
+.pair .ar{color:var(--muted)}
 .pg::before{content:attr(data-t);display:block;margin:0 0 14px;padding:16px 18px;border-radius:18px;color:#fff;font-size:1.25rem;font-weight:800;background:linear-gradient(110deg,var(--a),var(--a2));box-shadow:0 8px 24px color-mix(in srgb,var(--a) 40%,transparent)}
 .card{border-top:4px solid var(--a)!important;background:var(--surface);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 8px 28px rgba(15,23,42,.08)}
 .row{display:flex;gap:10px}
@@ -106,6 +111,7 @@ svg.trend circle{fill:var(--a)}
   <div class="row"><input id="amount" type="text" inputmode="decimal" value="100" aria-label="Monto"><select id="from" aria-label="Moneda de origen"></select></div>
   <div class="swap"><button id="swap" type="button">⇅ Invertir</button><button id="fav" type="button" class="ghost" aria-label="Favorita">☆ Favorita</button></div>
   <select id="to" aria-label="Moneda de destino"></select>
+  <div class="pair" id="pair"></div>
   <p class="result" id="result" aria-live="polite"></p>
   <p class="rate" id="rate"></p>
   <details><summary>Usar mi propia cotización</summary>
@@ -144,7 +150,7 @@ svg.trend circle{fill:var(--a)}
  <div class="card"><h2>Datos</h2><p class="hint">Tus favoritas, billetera, cotizaciones propias e historial se guardan solo en este dispositivo.</p><div class="set"><span></span><button class="ghost" id="reset" type="button">Borrar mis datos</button></div></div>
  <p class="note">Los valores son tipos de cambio de referencia internacionales, actualizados una vez al día. Las casas de cambio y los bancos aplican su propia compra y venta, así que el monto final puede variar. Los gráficos de evolución usan el historial de los últimos 21 días de currency-api; si no está disponible, usan los días en que abriste la app.</p>
 </section>
-<p class="note" style="text-align:center">Cotizaciones de <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener" style="color:var(--a)">ExchangeRate-API</a> · Historial: <a href="https://github.com/fawazahmed0/exchange-api" target="_blank" rel="noopener" style="color:var(--a)">currency-api</a></p>
+<p class="note" style="text-align:center">Cotizaciones de <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener" style="color:var(--a)">ExchangeRate-API</a> · Historial: <a href="https://github.com/fawazahmed0/exchange-api" target="_blank" rel="noopener" style="color:var(--a)">currency-api</a> · Banderas: <a href="https://flagcdn.com" target="_blank" rel="noopener" style="color:var(--a)">FlagCDN</a></p>
 </main>
 <nav class="nav" aria-label="Secciones">
  <a href="#convertir"><span>💱</span>Convertir</a><a href="#explorar"><span>🔎</span>Explorar</a><a href="#graficos"><span>📊</span>Gráficos</a><a href="#billetera"><span>👛</span>Billetera</a><a href="#ajustes"><span>🎨</span>Ajustes</a>
@@ -167,6 +173,13 @@ const nf=(n,d)=>new Intl.NumberFormat("es-PY",{minimumFractionDigits:d,maximumFr
 const sig=n=>new Intl.NumberFormat("es-PY",{maximumSignificantDigits:4}).format(n);
 const norm=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 const fmt=(n,c)=>nf(n,digits(c));
+function flag(c,big){
+  if(c==="EUR"||!/^[A-Z]{3}$/.test(c)||c[0]==="X")return coin(c,big);
+  const cc=(c==="EUR"?"eu":c.slice(0,2).toLowerCase()),w=big?80:40;
+  return `<img class="fl${big?" big":""}" src="https://flagcdn.com/w${w}/${cc}.png" alt="" data-c="${c}" data-b="${big?1:0}" loading="lazy" onerror="bad(this)">`;
+}
+function coin(c,big){return `<span class="fl coin${big?" big":""}" style="${big?"font-size:.7rem":""}" aria-hidden="true">${c}</span>`}
+function bad(i){i.outerHTML=coin(i.dataset.c,i.dataset.b==="1")}
 const empty=t=>`<p class="empty">${t}</p>`;
 
 function parse(s){
@@ -185,6 +198,7 @@ function getRate(f,t){
 function convert(){
   const a=parse($("amount").value),f=$("from").value,t=$("to").value;
   $("fav").textContent=favs.includes(t)?"★ Favorita":"☆ Favorita";
+  $("pair").innerHTML=`<span>${flag(f,1)}<b>${f}</b></span><span class="ar">→</span><span>${flag(t,1)}<b>${t}</b></span>`;
   if(a===null||a<0){$("result").textContent="Escribe un monto válido";$("rate").textContent="";return}
   const r=getRate(f,t),own=custom[f+">"+t]||custom[t+">"+f];
   $("result").textContent=fmt(a*r,t)+" "+t;
@@ -197,7 +211,7 @@ function showStatus(live){
 }
 function drawFavs(){
   const a=parse($("amount").value)||0,f=$("from").value,l=favs.filter(c=>c!==f&&rates[c]);
-  $("favs").innerHTML=l.length?l.map((c,i)=>`<button type="button" class="fc" data-c="${c}" style="background:linear-gradient(135deg,${PAL[i%PAL.length]},color-mix(in srgb,${PAL[i%PAL.length]} 60%,#000))"><b>${c} · ${cname(c)}</b><span>${fmt(a*getRate(f,c),c)}</span></button>`).join(""):empty("Aún no tienes favoritas. Elige una moneda de destino y toca ☆ Favorita.");
+  $("favs").innerHTML=l.length?l.map((c,i)=>`<button type="button" class="fc" data-c="${c}" style="background:linear-gradient(135deg,${PAL[i%PAL.length]},color-mix(in srgb,${PAL[i%PAL.length]} 60%,#000))"><b>${flag(c)}${c} · ${cname(c)}</b><span>${fmt(a*getRate(f,c),c)}</span></button>`).join(""):empty("Aún no tienes favoritas. Elige una moneda de destino y toca ☆ Favorita.");
 }
 function drawQuick(){
   const f=$("from").value,t=$("to").value,r=getRate(f,t);
@@ -210,7 +224,7 @@ function drawExplorer(){
   const all=Object.keys(rates).filter(c=>c!==f&&(!q||norm(c+" "+cname(c)).includes(q)));
   const rk=c=>POP.includes(c)?POP.indexOf(c):999;
   all.sort((a,b)=>rk(a)-rk(b)||cname(a).localeCompare(cname(b),"es"));
-  $("list").innerHTML=all.length?all.slice(0,40).map(c=>`<button type="button" class="item" data-c="${c}"><span><b>${c}</b><small>${cname(c)}</small></span><span class="v">${sig(getRate(f,c))} ${c}</span></button>`).join("")+(all.length>40?`<p class="empty" style="padding:8px 12px">Hay ${all.length-40} más. Sigue escribiendo para acotar.</p>`:""):empty("No encontré monedas con esa búsqueda.");
+  $("list").innerHTML=all.length?all.slice(0,40).map(c=>`<button type="button" class="item" data-c="${c}"><span>${flag(c)}<b style="display:inline">${c}</b><small style="margin-left:34px">${cname(c)}</small></span><span class="v">${sig(getRate(f,c))} ${c}</span></button>`).join("")+(all.length>40?`<p class="empty" style="padding:8px 12px">Hay ${all.length-40} más. Sigue escribiendo para acotar.</p>`:""):empty("No encontré monedas con esa búsqueda.");
 }
 function pick(e){const b=e.target.closest("[data-c]");if(!b)return;$("to").value=b.dataset.c;render();location.hash="convertir"}
 function drawRanking(){
@@ -240,7 +254,7 @@ function drawWallet(){
   let off=25;
   const seg=it.map((i,k)=>{const p=i.v/tot*100,s=`<circle cx="21" cy="21" r="15.9155" fill="none" stroke="${PAL[k%PAL.length]}" stroke-width="6" stroke-dasharray="${p} ${100-p}" stroke-dashoffset="${off}"/>`;off-=p;return s}).join("");
   $("wal").innerHTML=`<div class="wal"><svg class="donut" viewBox="0 0 42 42" role="img" aria-label="Distribución de tu billetera">${seg}<text x="21" y="20.5" text-anchor="middle" font-size="3.2" fill="var(--muted)">Total</text><text x="21" y="25" text-anchor="middle" font-size="3.6" font-weight="700" fill="var(--ink)">${fmt(tot,b)}</text><text x="21" y="28.6" text-anchor="middle" font-size="2.6" fill="var(--muted)">${b}</text></svg>
-  <div class="leg">${it.map((i,k)=>`<div class="lg"><i style="background:${PAL[k%PAL.length]}"></i><span><b>${i.c}</b> ${fmt(i.a,i.c)}</span><span style="flex:none;color:var(--muted)">${nf(i.v/tot*100,1)}%</span><button type="button" data-rm="${i.c}" aria-label="Quitar ${i.c}">×</button></div>`).join("")}</div></div>`;
+  <div class="leg">${it.map((i,k)=>`<div class="lg"><i style="background:${PAL[k%PAL.length]}"></i><span>${flag(i.c)}<b>${i.c}</b> ${fmt(i.a,i.c)}</span><span style="flex:none;color:var(--muted)">${nf(i.v/tot*100,1)}%</span><button type="button" data-rm="${i.c}" aria-label="Quitar ${i.c}">×</button></div>`).join("")}</div></div>`;
 }
 function render(){convert();drawFavs();drawQuick();drawExplorer();drawRanking();drawTrend();drawMovers();drawWallet()}
 
