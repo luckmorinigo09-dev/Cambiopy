@@ -6,6 +6,12 @@
 <title>CambioPY: conversor de guaraníes, dólares, euros y más</title>
 <meta name="description" content="Convierte guaraníes (PYG), dólares, euros, reales y más de 150 monedas. Buscador, gráficos, billetera multimoneda y temas de color. Funciona sin conexión.">
 <meta name="theme-color" content="#0d9488">
+<meta property="og:type" content="website">
+<meta property="og:title" content="CambioPY: conversor de monedas">
+<meta property="og:description" content="Convierte guaraníes, dólares, euros, reales y más de 150 monedas. Con buscador, gráficos y billetera.">
+<meta property="og:url" content="https://luckmorinigo09-dev.github.io/Cambiopy/">
+<meta property="og:image" content="https://luckmorinigo09-dev.github.io/Cambiopy/icon-512.png">
+<meta name="twitter:card" content="summary">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -134,9 +140,11 @@ svg.trend circle{fill:var(--a)}
  <div class="card"><h2>Tema de color</h2><div class="sws" id="sws"></div>
   <div class="set"><label for="mode">Apariencia</label><select id="mode"><option value="auto">Automática</option><option value="light">Clara</option><option value="dark">Oscura</option></select></div>
   <div class="set"><label for="anim">Fondo animado</label><input id="anim" type="checkbox" style="width:22px;height:22px"></div></div>
+ <div class="card"><h2>Compartir CambioPY</h2><p class="hint">Mándale el enlace a quien quiera usarla. Se abre en el navegador y se puede instalar como app.</p><div class="set"><span></span><button id="share" type="button">Compartir enlace</button></div></div>
  <div class="card"><h2>Datos</h2><p class="hint">Tus favoritas, billetera, cotizaciones propias e historial se guardan solo en este dispositivo.</p><div class="set"><span></span><button class="ghost" id="reset" type="button">Borrar mis datos</button></div></div>
  <p class="note">Los valores son tipos de cambio de referencia internacionales, actualizados una vez al día. Las casas de cambio y los bancos aplican su propia compra y venta, así que el monto final puede variar. Los gráficos de evolución usan los días en que abriste la app en este dispositivo.</p>
 </section>
+<p class="note" style="text-align:center">Cotizaciones de <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener" style="color:var(--a)">ExchangeRate-API</a></p>
 </main>
 <nav class="nav" aria-label="Secciones">
  <a href="#convertir"><span>💱</span>Convertir</a><a href="#explorar"><span>🔎</span>Explorar</a><a href="#graficos"><span>📊</span>Gráficos</a><a href="#billetera"><span>👛</span>Billetera</a><a href="#ajustes"><span>🎨</span>Ajustes</a>
@@ -151,7 +159,7 @@ let dn=null;try{dn=new Intl.DisplayNames(["es"],{type:"currency"})}catch(e){}
 const cname=c=>{try{return dn?dn.of(c):c}catch(e){return c}};
 const DIG={};
 function digits(c){if(!(c in DIG)){try{DIG[c]=new Intl.NumberFormat("es-PY",{style:"currency",currency:c}).resolvedOptions().maximumFractionDigits}catch(e){DIG[c]=2}}return DIG[c]}
-let rates={PYG:7300,USD:1,EUR:0.86,BRL:5.4,ARS:1450,UYU:40,CLP:950,BOB:6.9,GBP:0.76,MXN:18.5,COP:3900,PEN:3.4,CAD:1.4,AUD:1.55,JPY:155,CNY:7.1,CHF:0.8,KRW:1400,INR:88};
+let rates={PYG:6350,USD:1,EUR:0.9156,BRL:5.4,ARS:1450,UYU:40,CLP:950,BOB:6.9,GBP:0.76,MXN:18.5,COP:3900,PEN:3.4,CAD:1.4,AUD:1.55,JPY:155,CNY:7.1,CHF:0.8,KRW:1400,INR:88};
 let updated=null,hist=[],custom={},favs=[],wal=[],set={theme:"multicolor",mode:"auto",anim:true},ACC="#0d9488";
 const $=id=>document.getElementById(id);
 const LS={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v===null||v===undefined?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -269,7 +277,8 @@ function saveHistory(){
   if(hist.length&&hist[hist.length-1].d===d)hist[hist.length-1].r=snap;else hist.push({d,r:snap});
   hist=hist.slice(-60);LS.set("cambiopy_hist",hist);
 }
-async function load(){
+async function load(manual){
+  if(updated&&Date.now()-updated<3600000){showStatus(true);if(manual)$("status").textContent+=" · ya está al día";fillAll();render();return}
   try{
     const data=await(await fetch("https://open.er-api.com/v6/latest/USD")).json();
     if(data.result!=="success")throw new Error("API");
@@ -296,7 +305,7 @@ $("q").addEventListener("input",drawExplorer);
 $("list").addEventListener("click",pick);$("favs").addEventListener("click",pick);
 $("swap").addEventListener("click",()=>{const f=$("from").value;$("from").value=$("to").value;$("to").value=f;render()});
 $("fav").addEventListener("click",()=>{const t=$("to").value;favs=favs.includes(t)?favs.filter(c=>c!==t):favs.concat(t);LS.set("cambiopy_fav",favs);render()});
-$("refresh").addEventListener("click",()=>{$("status").textContent="Actualizando…";load()});
+$("refresh").addEventListener("click",()=>{$("status").textContent="Actualizando…";load(true)});
 $("apply").addEventListener("click",()=>{const v=parse($("custom").value),f=$("from").value,t=$("to").value;if(v&&v>0&&f!==t){custom[f+">"+t]=v;delete custom[t+">"+f];LS.set("cambiopy_custom",custom);$("custom").value="";render()}});
 $("clear").addEventListener("click",()=>{const f=$("from").value,t=$("to").value;delete custom[f+">"+t];delete custom[t+">"+f];LS.set("cambiopy_custom",custom);render()});
 $("wadd").addEventListener("click",()=>{const a=parse($("wa").value),c=$("wc").value;if(a&&a>0){const w=wal.find(x=>x.c===c);w?w.a+=a:wal.push({c,a});LS.set("cambiopy_wal",wal);$("wa").value="";render()}});
@@ -304,6 +313,10 @@ $("wal").addEventListener("click",e=>{const b=e.target.closest("[data-rm]");if(b
 $("sws").addEventListener("click",e=>{const b=e.target.closest(".sw");if(b){set.theme=b.dataset.t;saveSet();render();startBg()}});
 $("mode").addEventListener("change",e=>{set.mode=e.target.value;saveSet()});
 $("anim").addEventListener("change",e=>{set.anim=e.target.checked;saveSet();startBg()});
+$("share").addEventListener("click",async()=>{
+  const url=location.href.split("#")[0],text="CambioPY: conversor de más de 150 monedas, con buscador y gráficos";
+  try{if(navigator.share){await navigator.share({title:"CambioPY",text,url})}else{await navigator.clipboard.writeText(url);alert("Enlace copiado: "+url)}}catch(e){}
+});
 $("reset").addEventListener("click",()=>{if(confirm("¿Borrar favoritas, billetera, cotizaciones propias e historial de este dispositivo?")){["cambiopy","cambiopy_hist","cambiopy_custom","cambiopy_fav","cambiopy_wal","cambiopy_set"].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}});location.reload()}});
 matchMedia("(prefers-color-scheme:dark)").addEventListener("change",()=>{if(set.mode==="auto")applyTheme()});
 addEventListener("resize",initBg);addEventListener("hashchange",go);
